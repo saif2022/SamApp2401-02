@@ -1,91 +1,47 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Example SAM Application with API Gateway
+  WebAppBackendSAM_CD2401
 
+  Sample SAM Template for WebAppBackendSAM_CD2401
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
-    Timeout: 5
-    MemorySize: 128
-    Runtime: python3.8
-
-Parameters:
-  EnvType:
-    Description: Environment type.
-    Default: dev
-    Type: String
-    AllowedValues:
-      - prod
-      - dev
-    ConstraintDescription: must specify prod or test.
-
-Conditions:
-  CreateProdResources: !Equals
-    - !Ref EnvType
-    - prod
+    Timeout: 3
 
 Resources:
-  ApiGatewayApi:
-    Type: AWS::Serverless::Api
-    Properties:
-      StageName: !Ref EnvType
-
   HelloWorldFunction:
-    Type: AWS::Serverless::Function
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      Handler: app.lambda_handler
       CodeUri: app/
+      Handler: app.lambda_handler
+      Runtime: python3.11
+      Architectures:
+        - x86_64
+      # WEBHOOK_URL
+      Environment:
+        Variables:
+          WEBHOOK_URL: 'https://hooks.slack.com/services/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'
       Events:
-        ApiEvent:
-          Type: Api
+        HelloWorld:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
             Path: /hello
-            Method: GET
-            RestApiId: !Ref ApiGatewayApi
-      Role: !GetAtt LambdaExecutionRole.Arn
+            Method: get
 
-  CurrentDateFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      Handler: current_date.lambda_handler
-      CodeUri: current_date/
-      MemorySize: 128
-      Timeout: 3
-      Events:
-        ApiEvent:
-          Type: Api
-          Properties:
-            Path: /current-date
-            Method: GET
-            RestApiId: !Ref ApiGatewayApi
-      Role: !GetAtt LambdaExecutionRole.Arn
-
-  LambdaExecutionRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaRole
-      Policies:
-        - PolicyName: S3AccessPolicy
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - s3:GetObject
-                  - s3:PutObject
-                  - s3:DeleteObject
-                Resource: arn:aws:s3:::izaanschool-api-codebuild-artifact-123/*
+# AWS::Serverless::Api
 
 Outputs:
-  ApiGatewayApi:
-    Description: "API Gateway endpoint URL"
-    Value: !Sub "https://${ApiGatewayApi}.execute-api.${AWS::Region}.amazonaws.com/"
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  HelloWorldApi:
+    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
+  HelloWorldFunction:
+    Description: "Hello World Lambda Function ARN"
+    Value: !GetAtt HelloWorldFunction.Arn
+  HelloWorldFunctionIamRole:
+    Description: "Implicit IAM Role created for Hello World function"
+    Value: !GetAtt HelloWorldFunctionRole.Arn
